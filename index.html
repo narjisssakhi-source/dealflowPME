@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dealflow — Reprise PME</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1916;
+    --surface2: #232220;
+    --border: #2e2c28;
+    --accent: #c8a96e;
+    --accent-dim: #8a7249;
+    --green: #5a9e72;
+    --red: #c25a5a;
+    --blue: #5a7ec2;
+    --purple: #8a6ec2;
+    --orange: #c27a3a;
+    --text: #e8e4dc;
+    --text-dim: #9a9590;
+    --text-faint: #5a5650;
+    --radius: 8px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--text-dim); font-style: italic; font-size: 14px; margin-left: 8px; }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .stats-bar {
+    display: flex; gap: 20px;
+    padding: 10px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+
+  .stat {
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat-label { color: var(--text-dim); font-size: 12px; }
+  .stat-value { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+
+  .toolbar {
+    display: flex; gap: 10px; align-items: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative; flex: 1; min-width: 200px; max-width: 320px;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 7px 12px 7px 32px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent-dim); }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint); font-size: 13px; pointer-events: none;
+  }
+
+  select, .filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 7px 11px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .2s;
+  }
+  select:focus { border-color: var(--accent-dim); }
+
+  .view-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: var(--radius); padding: 3px; border: 1px solid var(--border); }
+  .view-btn {
+    background: none; border: none; color: var(--text-dim);
+    padding: 5px 10px; border-radius: 5px; cursor: pointer;
+    font-size: 12px; transition: all .15s;
+  }
+  .view-btn.active { background: var(--border); color: var(--text); }
+
+  .ml-auto { margin-left: auto; }
+
+  /* MAIN CONTENT */
+  .main { flex: 1; overflow: auto; padding: 20px 24px; }
+
+  /* TABLE VIEW */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--text-faint);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text-dim); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: var(--surface); }
+  tbody td { padding: 10px 12px; vertical-align: middle; }
+
+  .company-name { font-weight: 500; color: var(--text); }
+  .company-sector { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-prospect { background: rgba(90,126,194,.15); color: #7aa0d4; }
+  .badge-contact  { background: rgba(200,169,110,.15); color: var(--accent); }
+  .badge-analyse  { background: rgba(90,158,194,.15); color: #7ab8d4; }
+  .badge-loi      { background: rgba(138,110,194,.15); color: #a888d4; }
+  .badge-nego     { background: rgba(194,122,58,.15); color: #d48060; }
+  .badge-closing  { background: rgba(90,158,114,.15); color: #7ac490; }
+  .badge-abandon  { background: rgba(194,90,90,.1); color: #c27070; }
+
+  .priority-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .p-high { background: #c25a5a; }
+  .p-med  { background: #c2a03a; }
+  .p-low  { background: var(--text-faint); }
+
+  .mono { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-dim); }
+  .next-action { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: 12px; }
+  .date-cell { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-faint); }
+
+  .action-cell { display: flex; gap: 6px; }
+  .icon-btn {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; padding: 4px; border-radius: 4px;
+    transition: all .15s; font-size: 14px;
+  }
+  .icon-btn:hover { background: var(--border); color: var(--text); }
+
+  /* KANBAN VIEW */
+  .kanban {
+    display: flex; gap: 14px; height: 100%; overflow-x: auto; padding-bottom: 10px;
+  }
+  .kanban-col {
+    flex-shrink: 0; width: 240px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .kanban-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 4px; border-bottom: 2px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .kanban-title { font-size: 12px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
+  .kanban-count {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    background: var(--border); padding: 2px 7px; border-radius: 10px;
+    color: var(--text-dim);
+  }
+  .kanban-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .kanban-card:hover { border-color: var(--accent-dim); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .kanban-card-name { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+  .kanban-card-sector { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; }
+  .kanban-card-footer { display: flex; justify-content: space-between; align-items: center; }
+  .kanban-card-ca { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent-dim); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+    padding: 16px;
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%; max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; color: var(--accent);
+  }
+  .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    position: sticky; bottom: 0; background: var(--surface);
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: .4px; }
+  input[type=text], input[type=number], input[type=date], textarea, .form-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+    width: 100%;
+  }
+  input:focus, textarea:focus, .form-select:focus { border-color: var(--accent-dim); }
+  textarea { resize: vertical; min-height: 72px; }
+  .form-section { font-size: 11px; color: var(--accent-dim); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: -4px; }
+
+  .btn {
+    padding: 8px 18px; border-radius: var(--radius);
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; cursor: pointer; border: none;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #1a1510; }
+  .btn-primary:hover { background: #d4b87a; }
+  .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--border); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(194,90,90,.3); }
+  .btn-danger:hover { background: rgba(194,90,90,.1); }
+
+  .add-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #1a1510;
+    border: none; border-radius: var(--radius);
+    padding: 8px 16px;
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    font-weight: 600; cursor: pointer;
+    transition: background .15s;
+  }
+  .add-btn:hover { background: #d4b87a; }
+
+  .empty {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-faint);
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .4; }
+  .empty-text { font-size: 14px; }
+
+  /* DETAIL PANEL */
+  .detail-section { margin-bottom: 20px; }
+  .detail-section-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--accent-dim); margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .detail-item { }
+  .detail-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .detail-value { font-size: 13px; color: var(--text); }
+  .detail-notes { font-size: 13px; color: var(--text-dim); line-height: 1.6; white-space: pre-wrap; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    color: var(--text);
+    padding: 12px 18px; border-radius: var(--radius);
+    font-size: 13px; z-index: 200;
+    animation: slideIn .2s ease;
+    box-shadow: var(--shadow);
+  }
+  @keyframes slideIn {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .main { padding: 14px 14px; }
+    header, .toolbar, .stats-bar { padding-left: 14px; padding-right: 14px; }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Dealflow <span>reprise PME</span></div>
+    <div class="header-actions">
+      <button class="add-btn" onclick="openModal()">+ Ajouter</button>
+    </div>
+  </header>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Rechercher une société…" oninput="renderAll()">
+    </div>
+    <select id="filterStatus" onchange="renderAll()">
+      <option value="">Tous les statuts</option>
+      <option value="Prospect">Prospect</option>
+      <option value="Contact établi">Contact établi</option>
+      <option value="Analyse en cours">Analyse en cours</option>
+      <option value="LOI envoyée">LOI envoyée</option>
+      <option value="Négociation">Négociation</option>
+      <option value="Closing">Closing</option>
+      <option value="Abandonné">Abandonné</option>
+    </select>
+    <select id="filterSector" onchange="renderAll()">
+      <option value="">Tous secteurs</option>
+    </select>
+    <select id="filterPriority" onchange="renderAll()">
+      <option value="">Toutes priorités</option>
+      <option value="Haute">Haute</option>
+      <option value="Moyenne">Moyenne</option>
+      <option value="Basse">Basse</option>
+    </select>
+    <div class="view-toggle ml-auto">
+      <button class="view-btn active" id="btnTable" onclick="setView('table')">≡ Liste</button>
+      <button class="view-btn" id="btnKanban" onclick="setView('kanban')">⠿ Kanban</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainContent"></div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Nouvelle cible</div>
+      <button class="icon-btn" onclick="closeModal()" style="font-size:18px">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">🏭 Entreprise</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom de la société *</label>
+          <input type="text" id="f_name" placeholder="Ex: Mécano Industrie SARL">
+        </div>
+        <div class="form-group">
+          <label>Secteur *</label>
+          <input type="text" id="f_sector" placeholder="Ex: Pièces mécaniques">
+        </div>
+        <div class="form-group">
+          <label>CA annuel (€)</label>
+          <input type="number" id="f_ca" placeholder="Ex: 3500000">
+        </div>
+        <div class="form-group">
+          <label>Effectif</label>
+          <input type="number" id="f_headcount" placeholder="Ex: 28">
+        </div>
+        <div class="form-group">
+          <label>Localisation</label>
+          <input type="text" id="f_location" placeholder="Ex: Lyon, 69">
+        </div>
+        <div class="form-group">
+          <label>SIREN</label>
+          <input type="text" id="f_siren" placeholder="Ex: 123 456 789">
+        </div>
+      </div>
+
+      <div class="form-section" style="margin-top:6px">📊 Statut & Suivi</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Statut *</label>
+          <select class="form-select" id="f_status">
+            <option>Prospect</option>
+            <option>Contact établi</option>
+            <option>Analyse en cours</option>
+            <option>LOI envoyée</option>
+            <option>Négociation</option>
+            <option>Closing</option>
+            <option>Abandonné</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priorité</label>
+          <select class="form-select" id="f_priority">
+            <option>Haute</option>
+            <option selected>Moyenne</option>
+            <option>Basse</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Source</label>
+          <input type="text" id="f_source" placeholder="Ex: CCI, réseau, broker…">
+        </div>
+        <div class="form-group">
+          <label>Date de prochain contact</label>
+          <input type="date" id="f_next_date">
+        </div>
+        <div class="form-group full">
+          <label>Prochaine action</label>
+          <input type="text" id="f_next_action" placeholder="Ex: Envoyer NDA, appeler cédant…">
+        </div>
+      </div>
+
+      <div class="form-section" style="margin-top:6px">👤 Interlocuteur</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom du contact</label>
+          <input type="text" id="f_contact_name" placeholder="Ex: Jean Dupont">
+        </div>
+        <div class="form-group">
+          <label>Rôle</label>
+          <input type="text" id="f_contact_role" placeholder="Ex: Dirigeant, Intermédiaire…">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="text" id="f_contact_email" placeholder="jean@exemple.fr">
+        </div>
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="text" id="f_contact_phone" placeholder="+33 6…">
+        </div>
+      </div>
+
+      <div class="form-section" style="margin-top:6px">📝 Notes</div>
+      <div class="form-group">
+        <label>Notes libres</label>
+        <textarea id="f_notes" placeholder="Observations, points d'attention, contexte cédant, synergies potentielles…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailOverlay" style="display:none" onclick="closeDetailOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detailName">—</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:3px" id="detailSector">—</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" id="detailEditBtn" onclick="editFromDetail()">✏ Modifier</button>
+        <button class="icon-btn" onclick="closeDetail()" style="font-size:18px">×</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-danger" id="detailDeleteBtn" onclick="deleteFromDetail()">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="closeDetail()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'dealflow_v2';
+let entries = [];
+let currentView = 'table';
+let editingId = null;
+let detailId = null;
+
+function load() {
+  try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { entries = []; }
+  if (entries.length === 0) seedDemo();
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function seedDemo() {
+  const demo = [
+    { id: uid(), name: 'Mécano Précision SAS', sector: 'Pièces mécaniques', ca: 4200000, headcount: 32, location: 'Lyon, 69', siren: '412 345 678', status: 'Analyse en cours', priority: 'Haute', source: 'CCI Paris', next_action: 'Appeler dirigeant pour RDV NDA', next_date: '2026-04-05', contact_name: 'Pierre Faure', contact_role: 'Dirigeant', contact_email: 'pfaure@mecanoprecision.fr', contact_phone: '06 12 34 56 78', notes: 'Entreprise familiale, cédant 62 ans, succession complexe. Marges opérationnelles ~12%. Dépendance client Airbus à surveiller.', created: new Date().toISOString() },
+    { id: uid(), name: 'Roto Industrie SARL', sector: 'Aéronautique sous-traitance', ca: 2800000, headcount: 18, location: 'Toulouse, 31', siren: '523 456 789', status: 'Contact établi', priority: 'Haute', source: 'Réseau Branka', next_action: 'Envoyer NDA', next_date: '2026-04-02', contact_name: 'Marie Castells', contact_role: 'Intermédiaire', contact_email: 'm.castells@broker.fr', contact_phone: '06 98 76 54 32', notes: 'Bon positionnement défense/aéro. Cédant veut sortie rapide. À qualifier financement.', created: new Date().toISOString() },
+    { id: uid(), name: 'TransPieces Nord', sector: 'Pièces transport', ca: 6100000, headcount: 45, location: 'Lille, 59', siren: '634 567 890', status: 'LOI envoyée', priority: 'Haute', source: 'Broker', next_action: 'Négocier prix & accompagnement cédant', next_date: '2026-04-10', contact_name: 'André Lemaire', contact_role: 'Dirigeant-cédant', contact_email: 'andrel@transpieces.fr', contact_phone: '', notes: 'LOI envoyée le 20/03. EBE ~800k. Valorisation demandée 4x EBE. Contre-offre à préparer.', created: new Date().toISOString() },
+    { id: uid(), name: 'Forge Moderne SARL', sector: 'Forge & estampage', ca: 1900000, headcount: 14, location: 'Saint-Etienne, 42', siren: '745 678 901', status: 'Prospect', priority: 'Moyenne', source: 'Chambre des métiers', next_action: 'Premier contact téléphonique', next_date: '2026-04-15', contact_name: '', contact_role: '', contact_email: '', contact_phone: '', notes: 'Identifié via annonce Cédants. À contacter.', created: new Date().toISOString() },
+    { id: uid(), name: 'Aéro Déf Services', sector: 'Maintenance défense', ca: 8500000, headcount: 67, location: 'Bordeaux, 33', siren: '856 789 012', status: 'Négociation', priority: 'Haute', source: 'Family office', next_action: 'Finaliser structure LBO avec partenaire FO', next_date: '2026-04-08', contact_name: 'Sébastien Noël', contact_role: 'DAF', contact_email: 's.noel@aerodef.fr', contact_phone: '06 55 44 33 22', notes: 'Dossier complexe. Passif social latent à évaluer. Family office partenaire positionné en minoritaire. Closing visé fin Q2.', created: new Date().toISOString() },
+    { id: uid(), name: 'PlasTrans SARL', sector: 'Plasturgie transport', ca: 1200000, headcount: 11, location: 'Angers, 49', siren: '967 890 123', status: 'Abandonné', priority: 'Basse', source: 'Annonce web', next_action: '', next_date: '', contact_name: 'Marc Vidal', contact_role: 'Cédant', contact_email: '', contact_phone: '', notes: 'Marges trop faibles (<4%). Dépendance unique client (70%). Abandon décidé le 15/03.', created: new Date().toISOString() },
+  ];
+  entries = demo;
+  save();
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ─── FILTER & RENDER ─────────────────────────────────────────────────────────
+function filtered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const st = document.getElementById('filterStatus').value;
+  const sec = document.getElementById('filterSector').value;
+  const pr = document.getElementById('filterPriority').value;
+  return entries.filter(e =>
+    (!q || e.name.toLowerCase().includes(q) || e.sector.toLowerCase().includes(q) || (e.location||'').toLowerCase().includes(q) || (e.contact_name||'').toLowerCase().includes(q)) &&
+    (!st || e.status === st) &&
+    (!sec || e.sector === sec) &&
+    (!pr || e.priority === pr)
+  );
+}
+
+function renderAll() {
+  updateSectors();
+  renderStats();
+  if (currentView === 'table') renderTable();
+  else renderKanban();
+}
+
+function updateSectors() {
+  const sel = document.getElementById('filterSector');
+  const cur = sel.value;
+  const sectors = [...new Set(entries.map(e => e.sector).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Tous secteurs</option>' + sectors.map(s => `<option value="${s}"${s===cur?' selected':''}>${s}</option>`).join('');
+}
+
+function renderStats() {
+  const counts = {};
+  const statuses = ['Prospect','Contact établi','Analyse en cours','LOI envoyée','Négociation','Closing','Abandonné'];
+  statuses.forEach(s => counts[s] = 0);
+  entries.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
+  const colors = { 'Prospect':'#5a7ec2','Contact établi':'#c8a96e','Analyse en cours':'#5ab8d4','LOI envoyée':'#a888d4','Négociation':'#d48060','Closing':'#7ac490','Abandonné':'#c27070' };
+  const bar = document.getElementById('statsBar');
+  bar.innerHTML = `<div class="stat"><span class="stat-value" style="color:var(--text)">${entries.length}</span><span class="stat-label">total</span></div><div style="width:1px;background:var(--border)"></div>` +
+    statuses.filter(s => s !== 'Abandonné' || counts[s]>0).map(s =>
+      `<div class="stat"><span class="stat-dot" style="background:${colors[s]}"></span><span class="stat-label">${s}</span><span class="stat-value" style="color:${colors[s]}">${counts[s]}</span></div>`
+    ).join('');
+}
+
+// TABLE
+function renderTable() {
+  const rows = filtered();
+  const content = document.getElementById('mainContent');
+  if (rows.length === 0) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><div class="empty-text">Aucune cible ne correspond aux filtres.</div></div>`;
+    return;
+  }
+  content.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Société</th>
+      <th>Statut</th>
+      <th class="hide-mobile">CA</th>
+      <th class="hide-mobile">Effectif</th>
+      <th class="hide-mobile">Localisation</th>
+      <th>Priorité</th>
+      <th class="hide-mobile">Prochaine action</th>
+      <th class="hide-mobile">Date</th>
+      <th></th>
+    </tr></thead>
+    <tbody>${rows.map(e => rowHTML(e)).join('')}</tbody>
+  </table></div>`;
+}
+
+function badgeClass(status) {
+  return {'Prospect':'badge-prospect','Contact établi':'badge-contact','Analyse en cours':'badge-analyse','LOI envoyée':'badge-loi','Négociation':'badge-nego','Closing':'badge-closing','Abandonné':'badge-abandon'}[status]||'badge-prospect';
+}
+function prioClass(p) { return {'Haute':'p-high','Moyenne':'p-med','Basse':'p-low'}[p]||'p-low'; }
+function fmtCA(v) { if (!v) return '—'; const n = Number(v); if (n>=1000000) return (n/1000000).toFixed(1)+'M'; if (n>=1000) return (n/1000).toFixed(0)+'K'; return n+''; }
+function fmtDate(d) { if (!d) return '—'; const [y,m,day] = d.split('-'); return `${day}/${m}/${y.slice(2)}`; }
+
+function rowHTML(e) {
+  return `<tr onclick="openDetail('${e.id}')">
+    <td><div class="company-name">${esc(e.name)}</div><div class="company-sector">${esc(e.sector)}</div></td>
+    <td><span class="badge ${badgeClass(e.status)}">${e.status}</span></td>
+    <td class="mono hide-mobile">${fmtCA(e.ca)}</td>
+    <td class="mono hide-mobile">${e.headcount||'—'}</td>
+    <td class="hide-mobile" style="color:var(--text-dim);font-size:12px">${esc(e.location||'—')}</td>
+    <td><span class="priority-dot ${prioClass(e.priority)}"></span></td>
+    <td class="next-action hide-mobile">${esc(e.next_action||'—')}</td>
+    <td class="date-cell hide-mobile">${fmtDate(e.next_date)}</td>
+    <td onclick="event.stopPropagation()"><div class="action-cell">
+      <button class="icon-btn" title="Modifier" onclick="openModal('${e.id}')">✎</button>
+    </div></td>
+  </tr>`;
+}
+
+// KANBAN
+function renderKanban() {
+  const rows = filtered();
+  const statuses = ['Prospect','Contact établi','Analyse en cours','LOI envoyée','Négociation','Closing'];
+  const colors = { 'Prospect':'#5a7ec2','Contact établi':'#c8a96e','Analyse en cours':'#5ab8d4','LOI envoyée':'#a888d4','Négociation':'#d48060','Closing':'#7ac490' };
+  const groups = {};
+  statuses.forEach(s => groups[s] = []);
+  rows.filter(e => e.status !== 'Abandonné').forEach(e => { if (groups[e.status]) groups[e.status].push(e); });
+  const content = document.getElementById('mainContent');
+  content.style.overflow = 'hidden';
+  content.innerHTML = `<div class="kanban">${statuses.map(s => `
+    <div class="kanban-col">
+      <div class="kanban-header">
+        <span class="kanban-title" style="color:${colors[s]}">${s}</span>
+        <span class="kanban-count">${groups[s].length}</span>
+      </div>
+      ${groups[s].map(e => `
+        <div class="kanban-card" onclick="openDetail('${e.id}')">
+          <div class="kanban-card-name">${esc(e.name)}</div>
+          <div class="kanban-card-sector">${esc(e.sector)} · ${esc(e.location||'')}</div>
+          <div class="kanban-card-footer">
+            <span class="kanban-card-ca">${fmtCA(e.ca)}</span>
+            <span class="priority-dot ${prioClass(e.priority)}"></span>
+          </div>
+          ${e.next_action ? `<div style="font-size:11px;color:var(--text-faint);margin-top:7px;border-top:1px solid var(--border);padding-top:6px">→ ${esc(e.next_action)}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `).join('')}</div>`;
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'Modifier la cible' : 'Nouvelle cible';
+  const e = id ? entries.find(x => x.id === id) : null;
+  const fields = ['name','sector','ca','headcount','location','siren','status','priority','source','next_action','next_date','contact_name','contact_role','contact_email','contact_phone','notes'];
+  fields.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) el.value = e ? (e[f]||'') : (f==='priority'?'Moyenne':f==='status'?'Prospect':'');
+  });
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; editingId = null; }
+function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+function saveEntry() {
+  const name = document.getElementById('f_name').value.trim();
+  const sector = document.getElementById('f_sector').value.trim();
+  if (!name) { document.getElementById('f_name').focus(); return; }
+  const data = {
+    name, sector,
+    ca: document.getElementById('f_ca').value || '',
+    headcount: document.getElementById('f_headcount').value || '',
+    location: document.getElementById('f_location').value.trim(),
+    siren: document.getElementById('f_siren').value.trim(),
+    status: document.getElementById('f_status').value,
+    priority: document.getElementById('f_priority').value,
+    source: document.getElementById('f_source').value.trim(),
+    next_action: document.getElementById('f_next_action').value.trim(),
+    next_date: document.getElementById('f_next_date').value,
+    contact_name: document.getElementById('f_contact_name').value.trim(),
+    contact_role: document.getElementById('f_contact_role').value.trim(),
+    contact_email: document.getElementById('f_contact_email').value.trim(),
+    contact_phone: document.getElementById('f_contact_phone').value.trim(),
+    notes: document.getElementById('f_notes').value.trim(),
+  };
+  if (editingId) {
+    const idx = entries.findIndex(x => x.id === editingId);
+    entries[idx] = { ...entries[idx], ...data };
+  } else {
+    entries.unshift({ id: uid(), created: new Date().toISOString(), ...data });
+  }
+  save(); closeModal(); renderAll();
+  toast(editingId ? '✓ Cible mise à jour' : '✓ Cible ajoutée');
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function openDetail(id) {
+  detailId = id;
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('detailName').textContent = e.name;
+  document.getElementById('detailSector').innerHTML = `<span class="badge ${badgeClass(e.status)}">${e.status}</span> &nbsp; ${esc(e.sector)}`;
+  const body = document.getElementById('detailBody');
+  body.innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Entreprise</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">CA annuel</div><div class="detail-value">${e.ca ? fmtCA(e.ca)+' €' : '—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Effectif</div><div class="detail-value">${e.headcount||'—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Localisation</div><div class="detail-value">${esc(e.location||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">SIREN</div><div class="detail-value">${esc(e.siren||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">Source</div><div class="detail-value">${esc(e.source||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">Priorité</div><div class="detail-value"><span class="priority-dot ${prioClass(e.priority)}" style="margin-right:6px"></span>${e.priority||'—'}</div></div>
+      </div>
+    </div>
+    ${e.contact_name||e.contact_email||e.contact_phone ? `
+    <div class="detail-section">
+      <div class="detail-section-title">Interlocuteur</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Nom</div><div class="detail-value">${esc(e.contact_name||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">Rôle</div><div class="detail-value">${esc(e.contact_role||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">${e.contact_email ? `<a href="mailto:${e.contact_email}" style="color:var(--accent)">${esc(e.contact_email)}</a>` : '—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Téléphone</div><div class="detail-value">${e.contact_phone ? `<a href="tel:${e.contact_phone}" style="color:var(--accent)">${esc(e.contact_phone)}</a>` : '—'}</div></div>
+      </div>
+    </div>` : ''}
+    <div class="detail-section">
+      <div class="detail-section-title">Suivi</div>
+      <div class="detail-grid">
+        <div class="detail-item" style="grid-column:1/-1"><div class="detail-label">Prochaine action</div><div class="detail-value">${esc(e.next_action||'—')}</div></div>
+        <div class="detail-item"><div class="detail-label">Date prévue</div><div class="detail-value">${fmtDate(e.next_date)}</div></div>
+        <div class="detail-item"><div class="detail-label">Créé le</div><div class="detail-value">${e.created ? fmtDate(e.created.slice(0,10)) : '—'}</div></div>
+      </div>
+    </div>
+    ${e.notes ? `<div class="detail-section"><div class="detail-section-title">Notes</div><div class="detail-notes">${esc(e.notes)}</div></div>` : ''}
+  `;
+  document.getElementById('detailOverlay').style.display = 'flex';
+}
+
+function closeDetail() { document.getElementById('detailOverlay').style.display = 'none'; detailId = null; }
+function closeDetailOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
+function editFromDetail() { const id = detailId; closeDetail(); openModal(id); }
+function deleteFromDetail() {
+  if (!confirm('Supprimer cette cible ?')) return;
+  entries = entries.filter(x => x.id !== detailId);
+  save(); closeDetail(); renderAll(); toast('🗑 Cible supprimée');
+}
+
+// ─── VIEW ─────────────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('btnTable').classList.toggle('active', v==='table');
+  document.getElementById('btnKanban').classList.toggle('active', v==='kanban');
+  const main = document.getElementById('mainContent');
+  main.style.overflow = v === 'kanban' ? 'hidden' : 'auto';
+  renderAll();
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let toastTimer;
+function toast(msg) {
+  const old = document.querySelector('.toast');
+  if (old) old.remove();
+  clearTimeout(toastTimer);
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  toastTimer = setTimeout(() => el.remove(), 2800);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load(); renderAll();
+</script>
+</body>
+</html>
